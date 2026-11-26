@@ -1,26 +1,34 @@
+import shutil
 from pathlib import Path
-from core.quarantine_manager import QuarantineManager
+from core.file_organizer import FileOrganizer
 
 
 if __name__ == "__main__":
-    qm = QuarantineManager()
+    organizer = FileOrganizer()
 
-    blocked_attempt = qm.move_to_quarantine(r"C:\Windows\System32")
-    if blocked_attempt.get("blocked"):
-        v = blocked_attempt["verdict"]
-        print(f"[BLOQUEADO - {v.risk_level}] {v.reason}")
-        print(f"  Motivo: {v.explanation}\n")
+    blocked = organizer.organize_folder(r"C:\Windows\System32")
+    if blocked.get("blocked"):
+        print(f"[BLOQUEADO] {blocked['verdict'].reason}\n")
 
-    test_file = Path("prueba_basura.txt")
-    test_file.write_text("Archivo temporal de prueba", encoding="utf-8")
-    print(f"Archivo creado: {test_file.resolve()}")
+    test_dir = Path("test_desorden")
+    test_dir.mkdir(exist_ok=True)
 
-    moved = qm.move_to_quarantine(test_file)
-    if moved["success"]:
-        print(f"Movido a cuarentena con ID: {moved['item_id']}")
-        print(f"¿Sigue en la carpeta original?: {test_file.exists()}")
+    sample_files = [
+        "apuntes_inacap.pdf",
+        "foto_perfil.png",
+        "respaldo_web.zip",
+        "instalador_app.exe",
+        "script_prueba.py",
+        "notas_sueltas.xyz",
+    ]
 
-        restored = qm.restore_item(moved["item_id"])
-        print(f"Restaurado en: {restored['restored_to']}")
-        print(f"¿Volvió a aparecer?: {test_file.exists()}")
-        test_file.unlink()
+    for name in sample_files:
+        (test_dir / name).write_text("contenido de prueba", encoding="utf-8")
+
+    result = organizer.organize_folder(test_dir, mode="category")
+    if result["success"]:
+        print(f"Archivos organizados: {result['moved_count']}")
+        for entry in result["moved"]:
+            print(f"  {entry['file']} -> {entry['destination']}")
+
+    shutil.rmtree(test_dir)
