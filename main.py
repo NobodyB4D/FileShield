@@ -1,27 +1,26 @@
-from core.security_shield import SecurityShield
-
-
-def show_alert(verdict):
-    if verdict.is_safe:
-        print(f"[OK - {verdict.risk_level}] {verdict.resolved_path}")
-        print(f"  Detalle: {verdict.explanation}\n")
-    else:
-        print(f"[BLOQUEADO - RIESGO {verdict.risk_level}] {verdict.resolved_path}")
-        print(f"  Motivo: {verdict.reason}")
-        print(f"  Por qué no borrarlo: {verdict.explanation}\n")
+from pathlib import Path
+from core.quarantine_manager import QuarantineManager
 
 
 if __name__ == "__main__":
-    shield = SecurityShield()
+    qm = QuarantineManager()
 
-    test_paths = [
-        r"C:\Windows\System32",
-        r"C:\Windows\System32\kernel32.dll",
-        r"C:\Program Files",
-        r"C:\pagefile.sys",
-        "README.md",
-    ]
+    blocked_attempt = qm.move_to_quarantine(r"C:\Windows\System32")
+    if blocked_attempt.get("blocked"):
+        v = blocked_attempt["verdict"]
+        print(f"[BLOQUEADO - {v.risk_level}] {v.reason}")
+        print(f"  Motivo: {v.explanation}\n")
 
-    for path in test_paths:
-        result = shield.inspect_path(path)
-        show_alert(result)
+    test_file = Path("prueba_basura.txt")
+    test_file.write_text("Archivo temporal de prueba", encoding="utf-8")
+    print(f"Archivo creado: {test_file.resolve()}")
+
+    moved = qm.move_to_quarantine(test_file)
+    if moved["success"]:
+        print(f"Movido a cuarentena con ID: {moved['item_id']}")
+        print(f"¿Sigue en la carpeta original?: {test_file.exists()}")
+
+        restored = qm.restore_item(moved["item_id"])
+        print(f"Restaurado en: {restored['restored_to']}")
+        print(f"¿Volvió a aparecer?: {test_file.exists()}")
+        test_file.unlink()
